@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Service.Subscriber;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
@@ -12,7 +13,7 @@ namespace Service
         static void Main(string[] args)
         {
             ServiceHost host = new ServiceHost(typeof(DroneService));
-            host.Open();
+            host.Open();            
 
             Console.WriteLine("Service is open, press any key to close it.");
             Console.ReadKey();

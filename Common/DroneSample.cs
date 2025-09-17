@@ -11,29 +11,34 @@ namespace Common
     [DataContract]
     public class DroneSample
     {
-        private double linearAccelerationX;
-        private double linearAccelerationY;
-        private double linearAccelerationZ;
-        private double windSpeed;
-        private double windAngle;
-        private double dateTime;
+        private double? linearAccelerationX;
+        private double? linearAccelerationY;
+        private double? linearAccelerationZ;
+        private double? windSpeed;
+        private double? windAngle;
+        private double? dateTime;
 
         [DataMember]
-        public double LinearAccelerationX { get => linearAccelerationX; set => linearAccelerationX = value; }
+        public double? LinearAccelerationX { get => linearAccelerationX; set => linearAccelerationX = value; }
 
         [DataMember]
-        public double LinearAccelerationY { get => linearAccelerationY; set => linearAccelerationY = value; }
+        public double? LinearAccelerationY { get => linearAccelerationY; set => linearAccelerationY = value; }
 
         [DataMember]
-        public double LinearAccelerationZ { get => linearAccelerationZ; set => linearAccelerationZ = value; }
+        public double? LinearAccelerationZ { get => linearAccelerationZ; set => linearAccelerationZ = value; }
 
         [DataMember]
-        public double WindSpeed { get => windSpeed; set => windSpeed = value; }
+        public double? WindSpeed { get => windSpeed; set => windSpeed = value; }
 
         [DataMember]
-        public double WindAngle { get => windAngle; set => windAngle = value; }
+        public double? WindAngle { get => windAngle; set => windAngle = value; }
 
         [DataMember]
-        public double Time { get => dateTime; set => dateTime = value; }
+        public double? Time { get => dateTime; set => dateTime = value; }
+
+        public override string ToString()
+        {
+            return linearAccelerationX.ToString() + "," + linearAccelerationY.ToString() + "," + linearAccelerationZ.ToString() + "," + windSpeed.ToString() + "," + windAngle.ToString() + "," + Time.ToString();
+        }
     }
 }

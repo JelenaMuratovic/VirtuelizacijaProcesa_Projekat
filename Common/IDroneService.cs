@@ -14,6 +14,8 @@ namespace Common
         string StartSession(string metaHeader);
 
         [OperationContract]
+        [FaultContract(typeof(DataFormatFault))]
+        [FaultContract(typeof(DataValidationFault))]
         string PushSample(DroneSample sample);
 
         [OperationContract]

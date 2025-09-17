@@ -25,7 +25,7 @@ namespace Client
         }
         private static void SendData(IDroneService proxy)
         {
-            string csvPath = ("flight_values.csv");
+            string csvPath = ("flights_values.csv");
             if (!File.Exists(csvPath))
             {
                 Console.WriteLine("CSV file not found: " + csvPath);

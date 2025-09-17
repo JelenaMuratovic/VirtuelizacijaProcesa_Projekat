@@ -21,6 +21,8 @@ namespace Client
             string status = proxy.StartSession(metaHeader);
             Console.WriteLine("Server returned: " + status);
             SendData(proxy);
+            string endStatus = proxy.EndSession();
+            Console.WriteLine("Server returned: " + endStatus);
 
         }
         private static void SendData(IDroneService proxy)

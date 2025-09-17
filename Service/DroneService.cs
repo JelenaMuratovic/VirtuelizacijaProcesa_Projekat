@@ -7,6 +7,7 @@ using System.Linq;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
+using System.Configuration;
 
 namespace Service
 {
@@ -20,6 +21,7 @@ namespace Service
         private double Anorm = 0;
         private double deltaA = 0;
         private double AnormSum = 0;
+        private double Weffect = 0;
         private int samplesCount = 0;
 
         public delegate void TransferEventHandler(object sender, EventArgs e);
@@ -29,17 +31,25 @@ namespace Service
 
 
         public delegate void WarningEventHandler(object sender, WarningEventArguments e);
-        public event WarningEventHandler WarningRaisedEvent;
+        public event WarningEventHandler AccelerationSpikeEvent;
+        public event WarningEventHandler OutOfBandWarningEvent;
+        public event WarningEventHandler WindSpikeEvent;
 
         TransferCompletedObserver transferCompleted = new TransferCompletedObserver();
         TransferStartedObserver transferStarted = new TransferStartedObserver();
         SampleReceiveObserver sampleReceived = new SampleReceiveObserver();
+        AccelerationSpikeObserver accelerationSpike = new AccelerationSpikeObserver();
+        OutOfBandWarningObserver outOfBandWarning = new OutOfBandWarningObserver();
+        WindSpikeObserver windSpikeWarning = new WindSpikeObserver();
 
         public DroneService()
         {
             TransferStartedEvent += transferStarted.OnTransferStarted;
             TransferCompletedEvent += transferCompleted.OnTransferCompleted;
             SampleReceivedEvent += sampleReceived.OnSampleReceived;
+            AccelerationSpikeEvent += accelerationSpike.OnAccelerationSpike;
+            OutOfBandWarningEvent += outOfBandWarning.OnOutOfBandWarning;
+            WindSpikeEvent += windSpikeWarning.OnWindSpike;
         }
 
         public string EndSession()
@@ -54,7 +64,6 @@ namespace Service
 
         public string PushSample(DroneSample sample)
         {
-            SampleReceivedEvent(this, EventArgs.Empty);
             //validacija polja
             bool isValidFormat = ValidateFormat(sample);
             bool isValidValues = ValidateValues(sample);
@@ -74,26 +83,49 @@ namespace Service
                    new DataValidationFault($"Vrednosti polja nisu u validnom opsegu."),
                    "DataValidationFault");
             }
-            //Console.WriteLine("Prenos u toku...");
+            Console.WriteLine("Transfer in progress...");
 
             //upis u measurements.csv
             measurementsWriter.WriteLine(sample.ToString());
 
             samplesCount++;
+            //poziv eventa sample received
+            SampleReceivedEvent(this, EventArgs.Empty);
+            Console.WriteLine(samplesCount);
+
             Anorm = Math.Sqrt(Math.Pow((double)sample.LinearAccelerationX, 2) + Math.Pow((double)sample.LinearAccelerationY, 2) + Math.Pow((double)sample.LinearAccelerationZ, 2));
             AnormSum += Anorm;
             Amean = AnormSum / samplesCount;
-            
-            if(samplesCount > 1)
+
+            //pracenje odstupanja od tekuceg proseka
+            double odstupanje = double.Parse(System.Configuration.ConfigurationManager.AppSettings["odstupanje"]);
+            if (Anorm < (1.0 - odstupanje) * Amean)
+                OutOfBandWarningEvent(this, new WarningEventArguments("below"));
+            else if (Anorm > (1.0 + odstupanje) * Amean)
+                OutOfBandWarningEvent(this, new WarningEventArguments("above"));
+
+            //racunanje promene vetra
+            double W_threshold = double.Parse(System.Configuration.ConfigurationManager.AppSettings["W_threshold"]);
+            Weffect = Math.Abs((double)sample.WindSpeed * Math.Sin((double)sample.WindAngle));
+            if (Weffect > W_threshold)
+                WindSpikeEvent(this, new WarningEventArguments("above"));
+            else if (Weffect < -W_threshold)
+                WindSpikeEvent(this, new WarningEventArguments("below"));
+
+            //provera da li je dron naglo ubrzao
+            if (samplesCount > 1)
             {
                 deltaA = Anorm - previousAnorm;
-                //Console.WriteLine("deltaA: " + deltaA);
+                double A_threshold = double.Parse(System.Configuration.ConfigurationManager.AppSettings["A_threshold"]);
+                if (deltaA > A_threshold)
+                    AccelerationSpikeEvent(this, new WarningEventArguments("above"));
+                else if (deltaA < -A_threshold)
+                    AccelerationSpikeEvent(this, new WarningEventArguments("below"));
             }
             previousAnorm = Anorm;
 
-
-            //Console.WriteLine("Prenos zavrsen");
-            return "ACK: COMPLETED";
+            Console.WriteLine("Transfer completed\n");
+            return "ACK: WORKING";
         }
         private bool ValidateFormat(DroneSample sample)
         {
@@ -105,7 +137,6 @@ namespace Service
         }
         private bool ValidateValues(DroneSample sample)
         {
-            //dodaj validaciju za time
             if (sample.WindSpeed <= 0 || sample.WindAngle <= 0 || sample.Time < 0)
                 return false;
             else
